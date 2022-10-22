@@ -50,4 +50,5 @@ ans = Option
     , opt_quic_qlog_dir  = Nothing
     , opt_server_name = "foo"
     , opt_routing_file = Nothing
+    , opt_load_balance = False
     }

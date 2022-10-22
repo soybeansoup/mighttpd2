@@ -24,4 +24,5 @@
 , quicAddr : List Text
 , quicDebugDir : Optional Text
 , quicQlogDir  : Optional Text
+, loadBalance : Bool
 }

@@ -63,6 +63,7 @@ data Option = Option {
   , opt_quic_qlog_dir  :: Maybe FilePath
   , opt_server_name :: String
   , opt_routing_file :: Maybe String
+  , opt_load_balance :: Bool
 #ifdef DHALL
 } deriving (Eq, Show, Generic)
 #else
@@ -104,6 +105,7 @@ defaultOption = Option {
   , opt_quic_qlog_dir  = Nothing
   , opt_server_name = "Dummy"
   , opt_routing_file = Nothing
+  , opt_load_balance = False
 }
 
 ----------------------------------------------------------------
@@ -145,6 +147,7 @@ optionFromDhall o = Option
   , opt_quic_qlog_dir  = T.unpack <$> Do.quicQlogDir o
   , opt_server_name = "Dummy"
   , opt_routing_file = Nothing
+  , opt_load_balance = Do.loadBalance o
 }
 #endif
 
@@ -180,6 +183,7 @@ makeOpt def conf = Option {
   , opt_quic_qlog_dir      = get "Quic_Qlog_Dir" opt_quic_qlog_dir
   , opt_server_name        = "Dummy"
   , opt_routing_file       = Nothing
+  , opt_load_balance       = get "Load_Balance" opt_load_balance
   }
   where
     get k func = maybe (func def) fromConf $ lookup k conf
