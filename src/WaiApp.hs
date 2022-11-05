@@ -25,7 +25,7 @@ fileCgiApp cspec filespec cgispec revproxyspec rdr req respond
     case mmp um of
         Fail -> do
             let st = preconditionFailed412
-            fastResponse respond st defaultHeader "Precondition Failed\r\n"
+            fastResponse respond st defaultHeader "Preconditionnnn Failed\r\n"
         Redirect -> do
             let st = movedPermanently301
                 hdr = defaultHeader ++ redirectHeader req'
@@ -38,6 +38,7 @@ fileCgiApp cspec filespec cgispec revproxyspec rdr req respond
             cgiApp cspec cgispec (CgiRoute src dst) req' respond
         Found (RouteRevProxy src dst dom prt) ->
             revProxyApp cspec revproxyspec (RevProxyRoute src dst dom (naturalToInt prt)) req respond
+
   where
     (host, _) = hostPort req
     rawpath = rawPathInfo req

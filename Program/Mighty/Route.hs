@@ -3,7 +3,7 @@
 {-# LANGUAGE TupleSections #-}
 
 module Program.Mighty.Route (
-  -- * Paring a routing file
+  -- * Parsing a routing file
     parseRoute
   -- * Types
   , RouteDB
@@ -36,22 +36,25 @@ import Program.Mighty.Parser
 ----------------------------------------------------------------
 
 -- | A logical path specified in URL.
-type Src      = Path
+type Src          = Path
 -- | A physical path in a file system.
-type Dst      = Path
-type Domain   = ByteString
+type Dst          = Path
+type Domain       = ByteString
+
 #ifdef DHALL
-type Port     = Natural
+type Port         = Natural
 #else
-type Port     = Int
+type Port         = Int
 #endif
 
-data Block    = Block [Domain] [Route] deriving (Eq,Show)
-data Route    = RouteFile     Src Dst
-              | RouteRedirect Src Dst
-              | RouteCGI      Src Dst
+data Block     = Block [Domain] [Route]
+               deriving (Eq,Show)
+data Route     = RouteFile     Src Dst
+               | RouteRedirect Src Dst
+               | RouteCGI      Src Dst
               | RouteRevProxy Src Dst Domain Port
-              deriving (Eq,Show)
+              --  | RouteRevProxy Src Dst [(Domain, Port)]
+               deriving (Eq,Show)
 type RouteDB  = [Block]
 
 ----------------------------------------------------------------
@@ -63,6 +66,7 @@ parseRoute :: FilePath
            -> IO RouteDB
 parseRoute file ddom dport = parseFile (routeDB ddom dport) file
 
+
 routeDB :: Domain -> Port -> Parser RouteDB
 routeDB ddom dport = commentLines *> many1 (block ddom dport) <* eof
 
@@ -71,7 +75,7 @@ block ddom dport = Block <$> cdomains <*> many croute
   where
     cdomains = domains <* commentLines
     croute   = route ddom dport  <* commentLines
-
+      
 domains :: Parser [Domain]
 domains = open *> doms <* close <* trailing
   where
@@ -81,7 +85,7 @@ domains = open *> doms <* close <* trailing
     domain = BS.pack <$> many1 (noneOf "[], \t\n")
     sep = () <$ spcs1
 
-data Op = OpFile | OpCGI | OpRevProxy | OpRedirect
+data Op = OpFile | OpCGI | OpRevProxy | OpRedirect | OpProxyBal
 
 route :: Domain -> Port -> Parser Route
 route ddom dport = do
@@ -94,6 +98,9 @@ route ddom dport = do
         OpRevProxy -> do
             (dom,prt,d) <- domPortDst ddom dport
             return $ RouteRevProxy s d dom prt
+        OpProxyBal -> do
+            [(dom,prt,d)] <- hostGroup ddom dport
+            return $ RouteRevProxy s d dom prt
   where
     src = path
     dst = path
@@ -102,6 +109,7 @@ route ddom dport = do
       <|> OpRedirect <$ string "<<"
       <|> OpCGI      <$ string "=>"
       <|> OpRevProxy <$ string ">>"
+      <|> OpProxyBal <$ string ">>>"
     op  = op0 <* spcs
 
 path :: Parser Path
@@ -123,6 +131,16 @@ domPortDst ddom dport = (ddom,,) <$> port <*> path
     port = do
         void $ char ':'
         read <$> many1 (oneOf ['0'..'9'])
+
+hostGroup :: Domain -> Port -> Parser [(Domain, Port, Dst)]
+hostGroup ddom dport = do
+    open
+    ds <- many1 (domPortDst ddom dport)
+    close
+    return ds
+  where
+    open  = () <$ char '[' *> spcs
+    close = () <$ char ']' *> spcs
 
 ----------------------------------------------------------------
 

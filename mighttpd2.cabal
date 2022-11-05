@@ -159,6 +159,7 @@ Test-Suite spec
                       , hspec >= 1.3
                       , mighttpd2
                       , http-client >= 0.5
+  Build-Tool-Depends:   hspec-discover:hspec-discover
   if flag(tls)
     Build-Depends:      tls
                       , warp-tls >= 3.2.12 && < 3.4
