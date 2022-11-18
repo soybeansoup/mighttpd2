@@ -57,6 +57,7 @@ Library
                       , filepath
                       , http-date
                       , http-types
+                      , mtl
                       , network
                       , parsec >= 3
                       , resourcet

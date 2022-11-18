@@ -18,9 +18,11 @@ module Program.Mighty.Route (
   , newRouteDBRef
   , readRouteDBRef
   , writeRouteDBRef
+  , roundRobinPort
   ) where
 
 import Control.Monad
+import Control.Monad.State.Lazy as ST
 import Data.ByteString
 import qualified Data.ByteString.Char8 as BS
 import Data.IORef
@@ -123,6 +125,18 @@ domPortDst ddom dport = (ddom,,) <$> port <*> path
     port = do
         void $ char ':'
         read <$> many1 (oneOf ['0'..'9'])
+
+---------------------------------------------------------------
+rrPort :: Int -> [Int] -> ST.State Int Int
+rrPort n xs = do
+  previous <- get
+  let newResult = if Prelude.head xs /= n then Prelude.head xs else xs !! 1
+
+  put newResult
+  return newResult
+
+roundRobinPort :: Int -> Int
+roundRobinPort prt = evalState (rrPort prt [55002, 55000]) 0 
 
 ----------------------------------------------------------------
 
