@@ -60,7 +60,7 @@ defaultDomain :: Domain
 defaultDomain = "localhost"
 
 defaultPort :: Natural
-defaultPort = 80
+defaultPort = 55000
 
 openFileNumber :: Integer
 openFileNumber = 10000
@@ -83,6 +83,7 @@ server opt rpt route = reportDo rpt $ do
     svc <- openService opt
     unless debug writePidFile
     rdr <- newRouteDBRef route
+    reqRef <- initRRState 0 --initialize our req count
     tmgr <- T.initialize (naturalToInt (opt_connection_timeout opt) * 1000000)
 #ifdef HTTP_OVER_TLS
     mcred <- Just <$> loadCredentials opt
@@ -105,7 +106,7 @@ server opt rpt route = reportDo rpt $ do
     setHandlers opt rpt svc remover rdr
 
     report rpt "Mighty started"
-    runInUnboundThread $ mighty opt rpt svc lgr pushlgr mgr rdr mcred smgr tmgr
+    runInUnboundThread $ mighty opt rpt svc lgr pushlgr mgr rdr reqRef mcred smgr tmgr
     report rpt "Mighty retired"
     remover
     exitSuccess
@@ -182,10 +183,10 @@ ifRouteFileIsValid rpt opt act = case opt_routing_file opt of
 
 mighty :: Option -> Reporter -> Service
        -> ApacheLogger -> ServerPushLogger
-       -> ConnPool -> RouteDBRef
+       -> ConnPool -> RouteDBRef -> ReqRef
        -> Maybe Credentials -> Maybe SessionManager -> T.Manager
        -> IO ()
-mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr tmgr
+mighty opt rpt svc lgr pushlgr mgr rdr reqRef _mcreds _msmgr tmgr
   = reportDo rpt $ case svc of
     HttpOnly s  -> runSettingsSocket setting s app
 #ifdef HTTP_OVER_TLS
@@ -214,7 +215,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr _mcreds _msmgr tmgr
     _ -> error "never reach"
 #endif
   where
-    app = fileCgiApp cspec filespec cgispec revproxyspec rdr
+    app = fileCgiApp cspec filespec cgispec revproxyspec rdr reqRef
     debug = opt_debug_mode opt
     -- We don't use setInstallShutdownHandler because we may use
     -- two sockets for HTTP and HTTPS.

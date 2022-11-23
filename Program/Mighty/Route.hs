@@ -15,10 +15,13 @@ module Program.Mighty.Route (
   , Port
   -- * RouteDBRef
   , RouteDBRef
+  , ReqRef
   , newRouteDBRef
   , readRouteDBRef
   , writeRouteDBRef
-  , roundRobinPort
+  , getRRState
+  , setRRState
+  , initRRState
   ) where
 
 import Control.Monad
@@ -127,16 +130,45 @@ domPortDst ddom dport = (ddom,,) <$> port <*> path
         read <$> many1 (oneOf ['0'..'9'])
 
 ---------------------------------------------------------------
-rrPort :: Int -> [Int] -> ST.State Int Int
-rrPort n xs = do
-  previous <- get
-  let newResult = if Prelude.head xs /= n then Prelude.head xs else xs !! 1
+-- ports :: [Int]
+-- ports = [55002, 55000]
 
-  put newResult
-  return newResult
+-- rrPort :: ST.State Int Int
+-- rrPort = do
+--   port <- get
+--   case port of
+--     55002 -> put 55000
+--     55000 -> put 55002
+--   return port
 
-roundRobinPort :: Int -> Int
-roundRobinPort prt = evalState (rrPort prt [55002, 55000]) 0 
+-- getPort :: Int -> Int
+-- getPort = evalState rrPort
+
+newtype ReqRef = ReqRef (IORef Int)
+
+initRRState :: Int -> IO ReqRef
+initRRState state = ReqRef <$> newIORef state
+
+getRRState :: ReqRef -> IO Int
+getRRState (ReqRef reqState) = readIORef reqState
+
+setRRState :: ReqRef -> IO ()
+setRRState (ReqRef reqState) = do
+  r <- readIORef reqState
+  modifyIORef reqState (+1)
+  return ()
+
+-- getRRState :: (MonadState s m, rRState s) => m ()
+-- getRRState = changeRRState rRState
+
+-- changeRRState :: Bool -> Bool -> Bool
+-- changeRRState = do
+--     state <- get rRState
+--     put rRState
+--     return rRState
+
+-- rRState :: Bool -> Bool
+-- rRState = not
 
 ----------------------------------------------------------------
 
