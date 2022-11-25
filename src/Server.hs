@@ -60,7 +60,7 @@ defaultDomain :: Domain
 defaultDomain = "localhost"
 
 defaultPort :: Natural
-defaultPort = 55000
+defaultPort = 80
 
 openFileNumber :: Integer
 openFileNumber = 10000

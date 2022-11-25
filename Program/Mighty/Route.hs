@@ -130,19 +130,6 @@ domPortDst ddom dport = (ddom,,) <$> port <*> path
         read <$> many1 (oneOf ['0'..'9'])
 
 ---------------------------------------------------------------
--- ports :: [Int]
--- ports = [55002, 55000]
-
--- rrPort :: ST.State Int Int
--- rrPort = do
---   port <- get
---   case port of
---     55002 -> put 55000
---     55000 -> put 55002
---   return port
-
--- getPort :: Int -> Int
--- getPort = evalState rrPort
 
 newtype ReqRef = ReqRef (IORef Int)
 
@@ -157,18 +144,6 @@ setRRState (ReqRef reqState) = do
   r <- readIORef reqState
   modifyIORef reqState (+1)
   return ()
-
--- getRRState :: (MonadState s m, rRState s) => m ()
--- getRRState = changeRRState rRState
-
--- changeRRState :: Bool -> Bool -> Bool
--- changeRRState = do
---     state <- get rRState
---     put rRState
---     return rRState
-
--- rRState :: Bool -> Bool
--- rRState = not
 
 ----------------------------------------------------------------
 
