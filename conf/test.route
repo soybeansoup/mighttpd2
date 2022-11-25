@@ -1,7 +1,5 @@
 [*]
+/ >> localhost:55000/
 
-
-/1/ >> localhost:55000/
-/1/ >> localhost:55002/
-/2/ >> localhost:55002/
-/test/ >> localhost/
+[*]
+/ >> localhost:55002/

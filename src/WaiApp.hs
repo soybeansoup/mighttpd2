@@ -16,8 +16,8 @@ import Program.Mighty
 data Perhaps a = Found a | Redirect | Fail
 
 fileCgiApp :: ClassicAppSpec -> FileAppSpec -> CgiAppSpec -> RevProxyAppSpec
-           -> RouteDBRef -> ReqRef -> Application
-fileCgiApp cspec filespec cgispec revproxyspec rdr reqRef req respond
+           -> RouteDBRef -> ReqRef -> Bool -> Application
+fileCgiApp cspec filespec cgispec revproxyspec rdr reqRef lB req respond
   | dotFile = do
         let st = badRequest400
         fastResponse respond st defaultHeader "Bad Request\r\n"
@@ -25,9 +25,8 @@ fileCgiApp cspec filespec cgispec revproxyspec rdr reqRef req respond
     reqSt <- getRRState reqRef
     setRRState reqRef
     um <- readRouteDBRef rdr
-    print reqSt
     print um
-    case mmp um reqSt of
+    case mmp um reqSt lB of
         Fail -> do
             let st = preconditionFailed412
             fastResponse respond st defaultHeader "Precondition Failed\r\n"
@@ -42,22 +41,20 @@ fileCgiApp cspec filespec cgispec revproxyspec rdr reqRef req respond
         Found (RouteCGI   src dst) ->
             cgiApp cspec cgispec (CgiRoute src dst) req' respond
         Found (RouteRevProxy src dst dom prt) ->
-            revProxyApp cspec revproxyspec (RevProxyRoute src dst dom (if even reqSt then 55002 else 55000)) req respond
+            revProxyApp cspec revproxyspec (RevProxyRoute src dst dom (naturalToInt prt)) req respond
 
-
-
-            --(naturalToInt prt)
-
-
+            --if even reqSt then 55002 else 55000)
  
   where
     (host, _) = hostPort req
     rawpath = rawPathInfo req
     path = urlDecode False rawpath
     dotFile = BS.isPrefixOf "." rawpath || BS.isInfixOf "/." rawpath
-    mmp um reqSt = case getBlock host um of
-        Nothing    -> Fail
-        Just block -> getRoute path block reqSt
+    mmp um reqSt lB = 
+        case getBlock host (rRBlock um reqSt lB) of
+            Nothing    -> Fail
+            Just block -> getRoute path block
+
     fastResponse resp st hdr body = resp $ responseLBS st hdr body
     defaultHeader = [("Content-Type", "text/plain")]
     req' = req { rawPathInfo = path } -- FIXME
@@ -69,12 +66,12 @@ getBlock key (Block doms maps : ms)
   | key `elem` doms = Just maps
   | otherwise       = getBlock key ms
 
-getRoute :: ByteString -> [Route] -> Int -> Perhaps Route
-getRoute _ [] _               = Fail
-getRoute key (m:ms) reqSt
+getRoute :: ByteString -> [Route] -> Perhaps Route
+getRoute _ []                = Fail
+getRoute key (m:ms)
   | src `isPrefixOf` key     = Found m
   | src `isMountPointOf` key = Redirect
-  | otherwise                = getRoute key ms reqSt
+  | otherwise                = getRoute key ms
   where
     src = routeSource m
 
@@ -92,5 +89,8 @@ isMountPointOf src key = hasTrailingPathSeparator src
                       && BS.length src - BS.length key == 1
                       && key `BS.isPrefixOf` src
 
-
-
+rRBlock :: RouteDB -> Int -> Bool -> RouteDB
+rRBlock [] _ _ = []
+rRBlock xs _ False = xs
+rRBlock xs reqSt True =
+    [xs !! (reqSt `mod` length xs)]

@@ -106,13 +106,14 @@ server opt rpt route = reportDo rpt $ do
     setHandlers opt rpt svc remover rdr
 
     report rpt "Mighty started"
-    runInUnboundThread $ mighty opt rpt svc lgr pushlgr mgr rdr reqRef mcred smgr tmgr
+    runInUnboundThread $ mighty opt rpt svc lgr pushlgr mgr rdr reqRef lB mcred smgr tmgr
     report rpt "Mighty retired"
     remover
     exitSuccess
   where
     debug = opt_debug_mode opt
     port = opt_port opt
+    lB = opt_load_balance opt --load balance on/off
     pidfile
         | port == 80 = opt_pid_file opt
         | otherwise  = opt_pid_file opt ++ show port
@@ -183,10 +184,10 @@ ifRouteFileIsValid rpt opt act = case opt_routing_file opt of
 
 mighty :: Option -> Reporter -> Service
        -> ApacheLogger -> ServerPushLogger
-       -> ConnPool -> RouteDBRef -> ReqRef
+       -> ConnPool -> RouteDBRef -> ReqRef -> Bool
        -> Maybe Credentials -> Maybe SessionManager -> T.Manager
        -> IO ()
-mighty opt rpt svc lgr pushlgr mgr rdr reqRef _mcreds _msmgr tmgr
+mighty opt rpt svc lgr pushlgr mgr rdr reqRef lB _mcreds _msmgr tmgr
   = reportDo rpt $ case svc of
     HttpOnly s  -> runSettingsSocket setting s app
 #ifdef HTTP_OVER_TLS
@@ -215,7 +216,7 @@ mighty opt rpt svc lgr pushlgr mgr rdr reqRef _mcreds _msmgr tmgr
     _ -> error "never reach"
 #endif
   where
-    app = fileCgiApp cspec filespec cgispec revproxyspec rdr reqRef
+    app = fileCgiApp cspec filespec cgispec revproxyspec rdr reqRef lB
     debug = opt_debug_mode opt
     -- We don't use setInstallShutdownHandler because we may use
     -- two sockets for HTTP and HTTPS.
