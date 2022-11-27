@@ -27,7 +27,6 @@ module Program.Mighty.Route (
   ) where
 
 import Control.Monad
-import Control.Monad.State.Lazy as ST
 import Data.ByteString
 import qualified Data.ByteString.Char8 as BS
 import Data.IORef
