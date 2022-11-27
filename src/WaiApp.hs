@@ -39,7 +39,7 @@ fileCgiApp cspec filespec cgispec revproxyspec rdr reqRef lB req respond
             redirectApp cspec (RedirectRoute src dst) req' respond
         Found (RouteCGI   src dst) ->
             cgiApp cspec cgispec (CgiRoute src dst) req' respond
-        Found (RouteRevProxy src dst dom prt) ->
+        Found (RouteRevProxy src dst dom prt wt) ->
             revProxyApp cspec revproxyspec (RevProxyRoute src dst dom (naturalToInt prt)) req respond 
   where
     (host, _) = hostPort req
@@ -72,10 +72,13 @@ getRoute key (m:ms)
     src = routeSource m
 
 routeSource :: Route -> Src
-routeSource (RouteFile     src _)     = src
-routeSource (RouteRedirect src _)     = src
-routeSource (RouteCGI      src _)     = src
-routeSource (RouteRevProxy src _ _ _) = src
+routeSource (RouteFile     src _)      = src
+routeSource (RouteRedirect src _)      = src
+routeSource (RouteCGI      src _)      = src
+routeSource (RouteRevProxy src _ _ _ _) = src
+
+routeWeight :: Route -> Weight
+routeWeight (RouteRevProxy _ _ _ _ wt) = wt
 
 isPrefixOf :: Path -> ByteString -> Bool
 isPrefixOf src key = src `BS.isPrefixOf` key

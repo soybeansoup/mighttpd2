@@ -66,7 +66,7 @@ main = do
 #else
           opt   <- parseOption config_file
 #endif
-          route <- parseRoute  routing_file defaultDomain defaultPort
+          route <- parseRoute  routing_file defaultDomain defaultPort defaultWeight
           let opt' = opt { opt_routing_file = Just routing_file
                          , opt_server_name = svrnm
                          }

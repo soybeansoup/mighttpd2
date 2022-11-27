@@ -13,6 +13,7 @@ module Program.Mighty.Route (
   , Dst
   , Domain
   , Port
+  , Weight
   -- * RouteDBRef
   , RouteDBRef
   , ReqRef
@@ -48,15 +49,17 @@ type Dst      = Path
 type Domain   = ByteString
 #ifdef DHALL
 type Port     = Natural
+type Weight   = Natural
 #else
 type Port     = Int
+type Weight   = Int
 #endif
 
 data Block    = Block [Domain] [Route] deriving (Eq,Show)
 data Route    = RouteFile     Src Dst
               | RouteRedirect Src Dst
               | RouteCGI      Src Dst
-              | RouteRevProxy Src Dst Domain Port
+              | RouteRevProxy Src Dst Domain Port Weight
               deriving (Eq,Show)
 type RouteDB  = [Block]
 
@@ -66,17 +69,18 @@ type RouteDB  = [Block]
 parseRoute :: FilePath
            -> Domain -- ^ A default domain, typically \"localhost\"
            -> Port   -- ^ A default port, typically 80.
+           -> Weight -- ^ A default weight for LoadBalancing (1)
            -> IO RouteDB
-parseRoute file ddom dport = parseFile (routeDB ddom dport) file
+parseRoute file ddom dport dweight = parseFile (routeDB ddom dport dweight) file
 
-routeDB :: Domain -> Port -> Parser RouteDB
-routeDB ddom dport = commentLines *> many1 (block ddom dport) <* eof
+routeDB :: Domain -> Port -> Weight -> Parser RouteDB
+routeDB ddom dport dweight = commentLines *> many1 (block ddom dport dweight) <* eof
 
-block :: Domain -> Port -> Parser Block
-block ddom dport = Block <$> cdomains <*> many croute
+block :: Domain -> Port -> Weight -> Parser Block
+block ddom dport dweight = Block <$> cdomains <*> many croute
   where
     cdomains = domains <* commentLines
-    croute   = route ddom dport  <* commentLines
+    croute   = route ddom dport dweight  <* commentLines
 
 domains :: Parser [Domain]
 domains = open *> doms <* close <* trailing
@@ -89,8 +93,8 @@ domains = open *> doms <* close <* trailing
 
 data Op = OpFile | OpCGI | OpRevProxy | OpRedirect
 
-route :: Domain -> Port -> Parser Route
-route ddom dport = do
+route :: Domain -> Port -> Weight -> Parser Route
+route ddom dport dweight = do
     s <- src
     o <- op
     case o of
@@ -98,8 +102,8 @@ route ddom dport = do
         OpRedirect -> RouteRedirect s <$> dst' <* trailing
         OpCGI      -> RouteCGI      s <$> dst <* trailing
         OpRevProxy -> do
-            (dom,prt,d) <- domPortDst ddom dport
-            return $ RouteRevProxy s d dom prt
+            (dom,prt,d,wt) <- domPortDst ddom dport dweight
+            return $ RouteRevProxy s d dom prt wt
   where
     src = path
     dst = path
@@ -113,22 +117,24 @@ route ddom dport = do
 path :: Parser Path
 path = do
     c <- char '/'
-    BS.pack . (c:) <$> many (noneOf "[], \t\n") <* spcs
+    BS.pack . (c:) <$> many (noneOf "[], \t\n, ;") <* spcs
 
 path' :: Parser Path
 path' = BS.pack <$> many (noneOf "[], \t\n") <* spcs
 
--- [host1][:port2]/path2
-
-domPortDst :: Domain -> Port -> Parser (Domain, Port, Dst)
-domPortDst ddom dport = (ddom,,) <$> port <*> path
-                    <|> try((,,) <$> domain <*> port <*> path)
-                    <|> (,dport,) <$> domain <*> path
+domPortDst :: Domain -> Port -> Weight -> Parser (Domain, Port, Dst, Weight)
+domPortDst ddom dport dweight = (ddom,,,)    <$> port   <*> path <*> weight
+                            <|> try((,,,)    <$> domain <*> port <*> path <*> weight)
+                            <|> (,,,dweight) <$> domain <*> port <*> path
+                            <|> (,dport,,)   <$> domain <*> path <*> weight
   where
     domain = BS.pack <$> many1 (noneOf ":/[], \t\n")
     port = do
         void $ char ':'
         read <$> many1 (oneOf ['0'..'9'])
+    weight = do
+        void $ char '-'
+        read <$> many1 (oneOf ['0'..'9']) <* spcs
 
 ---------------------------------------------------------------
 

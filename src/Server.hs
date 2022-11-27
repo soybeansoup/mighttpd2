@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
-module Server (server, defaultDomain, defaultPort) where
+module Server (server, defaultDomain, defaultPort, defaultWeight) where
 
 import Control.Concurrent (runInUnboundThread)
 import Control.Exception (try)
@@ -61,6 +61,9 @@ defaultDomain = "localhost"
 
 defaultPort :: Natural
 defaultPort = 80
+
+defaultWeight :: Natural
+defaultWeight = 1
 
 openFileNumber :: Integer
 openFileNumber = 10000
@@ -176,7 +179,7 @@ loadCredentials opt = do
 ifRouteFileIsValid :: Reporter -> Option -> (RouteDB -> IO ()) -> IO ()
 ifRouteFileIsValid rpt opt act = case opt_routing_file opt of
     Nothing    -> return ()
-    Just rfile -> try (parseRoute rfile defaultDomain defaultPort) >>= either reportError act
+    Just rfile -> try (parseRoute rfile defaultDomain defaultPort defaultWeight) >>= either reportError act
   where
     reportError = report rpt . BS.pack . ioeGetErrorString
 
