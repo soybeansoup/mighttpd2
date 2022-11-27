@@ -23,9 +23,8 @@ fileCgiApp cspec filespec cgispec revproxyspec rdr reqRef lB req respond
         fastResponse respond st defaultHeader "Bad Request\r\n"
   | otherwise = do
     reqSt <- getRRState reqRef
-    setRRState reqRef
     um <- readRouteDBRef rdr
-    print um
+    if reqSt == length um - 1 then resetRRState reqRef else setRRState reqRef
     case mmp um reqSt lB of
         Fail -> do
             let st = preconditionFailed412
@@ -41,10 +40,7 @@ fileCgiApp cspec filespec cgispec revproxyspec rdr reqRef lB req respond
         Found (RouteCGI   src dst) ->
             cgiApp cspec cgispec (CgiRoute src dst) req' respond
         Found (RouteRevProxy src dst dom prt) ->
-            revProxyApp cspec revproxyspec (RevProxyRoute src dst dom (naturalToInt prt)) req respond
-
-            --if even reqSt then 55002 else 55000)
- 
+            revProxyApp cspec revproxyspec (RevProxyRoute src dst dom (naturalToInt prt)) req respond 
   where
     (host, _) = hostPort req
     rawpath = rawPathInfo req

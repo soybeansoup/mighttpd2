@@ -22,6 +22,7 @@ module Program.Mighty.Route (
   , getRRState
   , setRRState
   , initRRState
+  , resetRRState
   ) where
 
 import Control.Monad
@@ -141,9 +142,11 @@ getRRState (ReqRef reqState) = readIORef reqState
 
 setRRState :: ReqRef -> IO ()
 setRRState (ReqRef reqState) = do
-  r <- readIORef reqState
   modifyIORef reqState (+1)
-  return ()
+
+resetRRState :: ReqRef -> IO ()
+resetRRState (ReqRef reqState) = do
+  writeIORef reqState 0
 
 ----------------------------------------------------------------
 
