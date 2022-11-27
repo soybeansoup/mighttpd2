@@ -39,7 +39,6 @@ data Option = Option {
   , opt_host :: String
   , opt_debug_mode :: Bool
   , opt_load_balance :: Bool
-  , opt_hosts :: [String]
   , opt_user  :: String
   , opt_group :: String
   , opt_pid_file    :: FilePath
@@ -82,7 +81,6 @@ defaultOption = Option {
   , opt_host = "*"
   , opt_debug_mode = True
   , opt_load_balance = False
-  , opt_hosts = ["localhost"]
   , opt_user  = "root"
   , opt_group = "root"
   , opt_pid_file    = "/var/run/mighty.pid"
@@ -125,7 +123,6 @@ optionFromDhall o = Option
   , opt_host = T.unpack $ Do.host o
   , opt_debug_mode = Do.debugMode o
   , opt_load_balance = Do.loadBalance o
-  , opt_hosts = T.unpack <$> Do.hosts o 
   , opt_user  = T.unpack $ Do.user o
   , opt_group = T.unpack $ Do.group o
   , opt_pid_file    = T.unpack $ Do.pidFile o
@@ -162,7 +159,6 @@ makeOpt def conf = Option {
   , opt_host               = get "Host" opt_host
   , opt_debug_mode         = get "Debug_Mode" opt_debug_mode
   , opt_load_balance       = get "Load_Balance" opt_load_balance
-  , opt_hosts              = get "Hosts" opt_hosts
   , opt_user               = get "User" opt_user
   , opt_group              = get "Group" opt_group
   , opt_pid_file           = get "Pid_File" opt_pid_file
